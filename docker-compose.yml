@@ -1,0 +1,19 @@
+services:
+  restic-browser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: restic-browser
+    ports:
+      - "3000:3000"
+    # Optional: Mount your restic repository mapping inside the container for local browsing
+    # volumes:
+    #   - /path/to/local/repo:/repo
+    # Mount Google application credentials if needed
+    #   - /path/to/credentials.json:/credentials.json
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      # - RESTIC_PASSWORD=your_password
+      # - AWS_ACCESS_KEY_ID=your_key
+      # - AWS_SECRET_ACCESS_KEY=your_secret

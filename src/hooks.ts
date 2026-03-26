@@ -1,5 +1,3 @@
-import { core } from "@tauri-apps/api";
-
 // workaround for vaadin with vite
 // see https://github.com/vaadin/vaadin-lumo-styles/issues/105
 const oldDefine = customElements.define;
@@ -33,5 +31,5 @@ document.addEventListener(
 
 // make window visible as soon as we got some content to show
 document.addEventListener("DOMContentLoaded", () => {
-  core.invoke<void>("show_app_window");
+  // no-op, standard web app does not need to show_window manually
 });

@@ -1,18 +1,19 @@
 <img src="./src/assets/images/eye.png" alt="drawing" height="48px"/> <img src="./src/assets/images/logo.png" alt="drawing" height="48px"/> 
 
 ---
+*Note: This project is a fork of the original Tauri/Rust desktop application. It was changed to use a minimal Node.js/TypeScript backend to allow its usage as a web service, designed to be run seamlessly via Docker.*
 
-A simple, cross-platform [restic backup](https://github.com/restic/restic) GUI for browsing and restoring restic repositories. 
+A simple, cross-platform [restic backup](https://github.com/restic/restic) web application for browsing restic repositories based on the original Tauri/Rust desktop application found [here](https://github.com/emuell/restic-browser).
 
-Built with [Tauri](https://tauri.app), based on leaanthony's [Restoric](https://github.com/leaanthony/restoric) PoC. 
+## Quick Start (Docker)
 
-Older versions of the restic browser were built using [Wails2](https://wails.io). The latest release based on Wails is [v0.2.6](https://github.com/emuell/restic-browser/releases/tag/v0.2.6). 
+The easiest way to run the new web-based Restic Browser is using Docker Compose.
 
-## Download
+```bash
+docker-compose up --build
+```
 
-Prebuilt binaries for **Windows**, **macOS** and **Linux** can be downloaded from the [GitHub releases](https://github.com/emuell/restic-browser/releases) page.
-
-On **Windows**, restic-browser can also be installed and updated via [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) `winget install restic-browser`
+Then, open your web browser and navigate to `http://localhost:3000`.
 
 
 ## Features
@@ -45,84 +46,41 @@ The UI is navigatable via keyboard shortcuts. To change the focus area, hit `Tab
 - `r`: Restore selected file or folder
 
 
-## Arguments
-
-### Usage
-```
-Restic-Browser [OPTIONS]
-```
-
-### Options
-```
--h, --help
-    Print help information
-
---insecure-tls
-    skip TLS certificate verification when connecting to the repo (insecure)
-
---password <password>
-    password for the repository - NOT RECOMMENDED - USE password-file/command instead. (default: $RESTIC_PASSWORD)
-
---password-command <password-command>
-    shell command to obtain the repository password from (default: $RESTIC_PASSWORD_COMMAND)
-  
---password-file <password-file>
-    file to read the repository password from (default: $RESTIC_PASSWORD_FILE)
-
--r, --repo <repo>
-    repository to show or restore from (default: $RESTIC_REPOSITORY)
-
---rclone <rclone>
-    ABS path to the rclone executable that should be used for rclone locations. (default: 'rclone')
-
---repository-file <repository-file>
-    file to read the repository location from (default: $RESTIC_REPOSITORY_FILE)
-
---restic <restic>
-    ABS path to the restic executable that should be used. (default: find in $PATH)
-
--V, --version
-    Print version information
-```
-
 ## System Requirements
 
-#### All platforms
-- Install [restic](https://github.com/restic/restic/releases/) and *make sure it is included in your $PATH*.<br />
-  On MacOS, where setting the PATH for desktop applications is a really hard thing to do, the restic executable will also be found if it's in one of the following folders: `/usr/local/bin, /opt/local/bin, /opt/homebrew/bin, ~/bin`.
+- **Docker** and **Docker Compose**
+- That's it! The Docker image natively packages the latest version of `restic` alongside the Node.js backend.
 
-#### Windows:
-- Windows 10 or later with [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section)
+## Local Development
 
-#### MacOS:
-- macOS 10.13 or later
-
-#### Linux:
-- Linux with GLIBC_2.35 or later (e.g. Ubuntu 22.04 or later)
-- WebKit2 (install via `apt install libwebkit2gtk-4.1` on Ubuntu)
-- Try using the Linux appimage from the prebuilt releases, in case libwebkit2gtk-4.1 is not available on your system.
-
-## Development
+If you prefer to run the application locally without Docker:
 
 ### Dependencies
 
-* Follow the [Tauri Prerequisites Docs](https://tauri.app/start/prerequisites/) to install a *C/C++ toolchain* and *Rust* 1.78 or later for your platform.
-* Make sure [npm](https://nodejs.org/en/download) *Node* 18 LTS or later is installed.
-* Install [restic](https://github.com/restic/restic/releases/) and make sure it is included in your $PATH. 
-  
-Note: installing the tauri CLI via cargo is not necessary. Tauri can be launched through npm (see below). 
+* Make sure [npm](https://nodejs.org/en/download) *Node* 20 LTS or later is installed.
+* Install [restic](https://github.com/restic/restic/releases/) and make sure it is included in your `$PATH`. 
 
-### Front-end and App Development
+### Running the Backend
 
-To work in live development mode with automatic hot-reloading, run `npm run tauri dev` in the root directory. 
+The Express backend wraps the `restic` CLI and exposes a REST API.
 
-### Rust Backend Debugging
+```bash
+cd backend
+npm install
+npm run build
+npm run start
+```
+*The backend will be available at `http://localhost:8000`.*
 
-To debug the Tauri Rust application code, you can use the included startup tasks of vscode. If you press "F5" in vscode, the application will be built in debug mode and then started.   
+### Running the Frontend
 
-### Building Production Packages
+The UI uses Vite, Lit, and Vaadin components. Make sure the backend is running first.
 
-To build a redistributable package in production mode, run `npm run tauri build` in the root directory.
+```bash
+npm install
+npm run dev
+```
+*Vite will hot-reload the frontend at `http://localhost:3000`.*
 
 
 ## License

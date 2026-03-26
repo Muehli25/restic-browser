@@ -1,9 +1,8 @@
-import { BaseDirectory, exists, readFile, writeFile } from "@tauri-apps/plugin-fs";
+
 import * as mobx from "mobx";
 
 import { resticApp } from "../backend/app";
 import { restic } from "../backend/restic";
-import { decodeTextData, encodeTextData } from "../utils/text-encoding";
 import type { Location } from "./location";
 import { LocationPreset } from "./location-preset";
 
@@ -345,41 +344,41 @@ class AppState {
 
   // load presets from config file
   private async _autoLoadPresets() {
-    if (await exists("presets.json", { baseDir: BaseDirectory.AppConfig })) {
-      const fileContent = await readFile("presets.json", {
-        baseDir: BaseDirectory.AppConfig,
-      });
-      const textContent = decodeTextData(fileContent);
-      const presetsObject = JSON.parse(textContent);
-      if (!Array.isArray(presetsObject)) {
-        throw "Content is not an array";
+    const textContent = localStorage.getItem("presets.json");
+    if (textContent) {
+      try {
+        const presetsObject = JSON.parse(textContent);
+        if (!Array.isArray(presetsObject)) {
+          throw "Content is not an array";
+        }
+        // NB: keep first entry: it is used as new location template
+        mobx.runInAction(() =>
+          this.locationPresets.push(
+            ...presetsObject.map((presetObject: any) => {
+              const newPreset = new LocationPreset();
+              newPreset.fromJSON(presetObject);
+              return newPreset;
+            }),
+          ),
+        );
+      } catch (err) {
+        console.error("Failed to parse presets from localStorage", err);
       }
-      // NB: keep first entry: it is used as new location template
-      mobx.runInAction(() =>
-        this.locationPresets.push(
-          ...presetsObject.map((presetObject) => {
-            const newPreset = new LocationPreset();
-            newPreset.fromJSON(presetObject);
-            return newPreset;
-          }),
-        ),
-      );
     }
   }
 
   // save presets to config file
   private _autoSavePresets() {
-    // auto-save location presets to config dir
+    // auto-save location presets to localStorage
     mobx.reaction(
       // skip first entry: it is used as new location template
       () => JSON.stringify(this.locationPresets.slice(1)),
       (contents) => {
-        const fileContent = encodeTextData(contents);
-        writeFile("presets.json", fileContent, {
-          baseDir: BaseDirectory.AppConfig,
-        }).catch((err) => {
+        try {
+          localStorage.setItem("presets.json", contents);
+        } catch (err: any) {
           console.error("Failed to save location presets: '%s'", err.message || String(err));
-        });
+        }
       },
       { delay: 500 },
     );

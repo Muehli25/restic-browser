@@ -1,14 +1,10 @@
 import { MobxLitElement } from "@adobe/lit-mobx";
-import { type DialogFilter, open } from "@tauri-apps/plugin-dialog";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { Notification } from "@vaadin/notification";
 import { type CSSResultGroup, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import * as mobx from "mobx";
 
 import { appState } from "../states/app-state";
 import { Location } from "../states/location";
-import { decodeTextData } from "../utils/text-encoding";
 
 import "@vaadin/horizontal-layout";
 import "@vaadin/vertical-layout";
@@ -36,11 +32,6 @@ const credentialDisplayTypes: Map<string, CredentialDisplayType> = new Map([
   ["GOOGLE_PROJECT_ID", CredentialDisplayType.Text],
   ["GOOGLE_APPLICATION_CREDENTIALS", CredentialDisplayType.File],
   ["RESTIC_REST_USERNAME", CredentialDisplayType.Text],
-]);
-
-// Dialog file filters for known file credentials. Defaults to "All files *.*".
-const credentialFileFilters: Map<string, DialogFilter[]> = new Map([
-  ["GOOGLE_APPLICATION_CREDENTIALS", [{ name: "json", extensions: ["json"] }]],
 ]);
 
 // -------------------------------------------------------------------------------------------------
@@ -271,106 +262,68 @@ export class ResticBrowserLocationProperties extends MobxLitElement {
   }
 
   private _browseLocalRepositoryPath() {
-    open({
-      directory: true,
-      multiple: false,
-      title: "Please select the root folder of a restic repository",
-    })
-      .then((directory) => {
-        if (Array.isArray(directory)) {
-          if (directory.length > 0) {
-            directory = directory[0];
-          } else {
-            directory = null;
-          }
-        }
-        if (directory != null) {
-          mobx.runInAction(() => {
-            this._location.path = directory as string;
-          });
-        }
-      })
-      .catch((err) => {
-        Notification.show(`Failed to open file dialog: '${err.message || err}'`, {
-          position: "bottom-center",
-          theme: "error",
-        });
+    const path = window.prompt("Please enter the root folder of a restic repository:");
+    if (path) {
+      mobx.runInAction(() => {
+        this._location.path = path;
       });
+    }
   }
 
   private _browseCredentialsPath(credential_name: string) {
-    open({
-      directory: false,
-      multiple: false,
-      filters: credentialFileFilters.get(credential_name),
-      title: "Please select a google application credentials JSON file",
-    })
-      .then((file) => {
-        if (Array.isArray(file)) {
-          if (file.length > 0) {
-            file = file[0];
-          } else {
-            file = null;
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        mobx.runInAction(() => {
+          const credential = this._location.credentials.find(
+            (item) => item.name === credential_name,
+          );
+          if (credential && re.target) {
+            // For a web app, we can just store the file content as the credential value if it's text,
+            // or we might realistically just prompt the user for the text since it's hard to pass local paths to a remote backend.
+            // Assuming the backend is local and expects a path, prompting for path is better, but browsers don't give absolute paths.
+            // As a graceful fallback for web migration, we'll prompt for the path manually.
           }
-        }
-        if (file != null) {
-          mobx.runInAction(() => {
-            const credential = this._location.credentials.find(
-              (item) => item.name === credential_name,
-            );
-            if (credential) {
-              credential.value = file as string;
-            }
-          });
-        }
-      })
-      .catch((err) => {
-        Notification.show(`Failed to open file dialog: '${err.message || err}'`, {
-          position: "bottom-center",
-          theme: "error",
         });
+      };
+      reader.readAsText(file);
+    };
+    // Since we need an absolute path to send to the backend, we must prompt instead of using file picker:
+    const path = window.prompt(`Please enter the absolute path to the ${credential_name} file:`);
+    if (path) {
+      mobx.runInAction(() => {
+        const credential = this._location.credentials.find(
+          (item) => item.name === credential_name,
+        );
+        if (credential) {
+          credential.value = path;
+        }
       });
+    }
   }
 
   private _readRepositoryPasswordFile() {
-    open({
-      multiple: false,
-      title: "Select file to read password from",
-      directory: false,
-    })
-      .then(
-        mobx.action((file) => {
-          if (Array.isArray(file)) {
-            if (file.length > 0) {
-              file = file[0];
-            } else {
-              file = null;
-            }
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        mobx.runInAction(() => {
+          if (re.target && typeof re.target.result === 'string') {
+            this._location.password = re.target.result.trim();
           }
-          if (file != null) {
-            readFile(file)
-              .then((fileContent) => {
-                mobx.action((fileContent: Uint8Array) => {
-                  // restic's `readText` impl supports BOM headers and also trims, so we should too
-                  const textContent = decodeTextData(fileContent);
-                  this._location.password = textContent.trim();
-                })(fileContent);
-              })
-              .catch((err) => {
-                Notification.show(`Failed to read password file: '${err.message || err}'`, {
-                  position: "bottom-center",
-                  theme: "error",
-                });
-              });
-          }
-        }),
-      )
-      .catch((err) => {
-        Notification.show(`Failed to open file dialog: '${err.message || err}'`, {
-          position: "bottom-center",
-          theme: "error",
         });
-      });
+      };
+      reader.readAsText(file);
+    };
+    fileInput.click();
   }
 }
 
